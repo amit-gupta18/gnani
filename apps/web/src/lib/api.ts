@@ -1,6 +1,11 @@
 import type { NoteListItem, NoteResponse, PresignResponse } from "@gnani/shared";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+// Always same-origin: Next.js rewrites /api/* to the Express API server-side
+// (see next.config.ts). This keeps the session cookie first-party — a
+// cross-origin fetch straight to the API domain would make it third-party
+// and get blocked by Safari ITP / Brave Shields / Chrome's rollout of the
+// same policy, no matter how permissive the API's CORS config is.
+const API_URL = "/api";
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
