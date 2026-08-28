@@ -9,11 +9,12 @@ import { notesRouter } from "./routes/notes.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
-const webUrl = process.env.WEB_URL ?? "http://localhost:3000";
 
+// Reflect any request origin so credentials (session cookies) still work.
+// Browsers reject Access-Control-Allow-Origin: * with credentials: true.
 app.use(
   cors({
-    origin: webUrl,
+    origin: true,
     credentials: true,
   })
 );
@@ -44,4 +45,18 @@ setInterval(async () => {
 
 app.listen(port, () => {
   console.log(`API listening on port ${port}`);
+
+  const runWorker =
+    process.env.RUN_WORKER === "true" ||
+    (process.env.NODE_ENV === "production" && process.env.RUN_WORKER !== "false");
+
+  if (runWorker) {
+    import("@gnani/worker")
+      .then(({ startWorkers }) => {
+        startWorkers();
+      })
+      .catch((err) => {
+        console.error("Failed to start embedded worker:", err);
+      });
+  }
 });

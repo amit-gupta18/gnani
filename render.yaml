@@ -3,37 +3,13 @@ services:
     name: gnani-api
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build -w @gnani/shared && npm run build -w @gnani/db && npm run build -w @gnani/queue && npm run build -w @gnani/api
+    buildCommand: npm install && npm run build -w @gnani/shared && npm run build -w @gnani/db && npm run build -w @gnani/queue && npm run build -w @gnani/worker && npm run build -w @gnani/api
     startCommand: node apps/api/dist/index.js
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
-      - key: R2_ACCOUNT_ID
-        sync: false
-      - key: R2_ACCESS_KEY_ID
-        sync: false
-      - key: R2_SECRET_ACCESS_KEY
-        sync: false
-      - key: R2_BUCKET_NAME
-        sync: false
-      - key: WEB_URL
-        sync: false
-      - key: SESSION_COOKIE_SECRET
-        generateValue: true
-
-  - type: worker
-    name: gnani-worker
-    runtime: docker
-    dockerfilePath: ./apps/worker/Dockerfile
-    dockerContext: .
-    plan: free
-    envVars:
-      - key: NODE_ENV
-        value: production
+      - key: RUN_WORKER
+        value: "true"
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
@@ -50,11 +26,11 @@ services:
         sync: false
       - key: GNANI_LANGUAGE_CODE
         value: en-IN
-      - key: AI_GATEWAY_API_KEY
+      - key: OPENAI_API_KEY
         sync: false
       - key: AI_GATEWAY_MODEL
-        sync: false
-      - key: AI_GATEWAY_FALLBACK_MODELS
-        sync: false
+        value: gpt-4o-mini
       - key: USE_GATEWAY
-        value: "true"
+        value: "false"
+      - key: SESSION_COOKIE_SECRET
+        sync: false

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import type { FailedStage, NoteStatus, Summary } from "@gnani/shared";
 import { getDb } from "./client.js";
 import { noteChunks, notes, type NewNote, type NewNoteChunk } from "./schema.js";
@@ -215,7 +215,7 @@ export async function getStalledNotes(thresholdMs: number) {
     .where(
       and(
         inArray(notes.status, ["uploaded", "transcribing", "summarizing"]),
-        sql`${notes.updatedAt} < ${cutoff}`
+        lt(notes.updatedAt, cutoff)
       )
     );
 }

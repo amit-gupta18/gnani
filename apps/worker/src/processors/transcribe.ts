@@ -23,8 +23,8 @@ import {
   transcribeWithGnani,
 } from "../services/audio.js";
 
-const GNANI_MAX_SECONDS = 60;
-const targetSec = Number(process.env.CHUNK_TARGET_SECONDS ?? 55);
+const GNANI_MAX_SECONDS = Number(process.env.GNANI_MAX_SEGMENT_SECONDS ?? 30);
+const targetSec = Number(process.env.CHUNK_TARGET_SECONDS ?? 28);
 const overlapSec = Number(process.env.CHUNK_OVERLAP_SECONDS ?? 2);
 const concurrency = Number(process.env.TRANSCRIBE_CONCURRENCY ?? 3);
 

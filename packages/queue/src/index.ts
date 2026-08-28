@@ -10,9 +10,13 @@ export function getRedisConnection(): Redis {
     if (!url) {
       throw new Error("REDIS_URL is not set");
     }
-    connection = new Redis(url, {
+    const redisUrl = url.includes("upstash.io") && url.startsWith("redis://")
+      ? url.replace("redis://", "rediss://")
+      : url;
+    connection = new Redis(redisUrl, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
+      ...(redisUrl.startsWith("rediss://") ? { tls: {} } : {}),
     });
   }
   return connection;
@@ -74,3 +78,4 @@ export async function closeQueues() {
   summarizeQueue = null;
   connection = null;
 }
+  
