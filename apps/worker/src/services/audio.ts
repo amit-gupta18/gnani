@@ -146,6 +146,22 @@ export function stitchTranscripts(chunks: string[], overlapSec: number): string 
   return result.trim();
 }
 
+// Proactive pacing, not just reactive retry-on-429: concurrent chunks would
+// otherwise all fire at once regardless of TRANSCRIBE_CONCURRENCY, which is
+// exactly the burst shape that trips Gnani's rate limit. This serializes
+// call *starts* to at least GNANI_MIN_INTERVAL_MS apart, no matter how many
+// chunks are in flight, by chaining every call onto a shared promise.
+const GNANI_MIN_INTERVAL_MS = Number(process.env.GNANI_MIN_INTERVAL_MS ?? 1500);
+let gnaniGate: Promise<void> = Promise.resolve();
+
+function throttleGnaniCall(): Promise<void> {
+  const wait = gnaniGate.then(
+    () => new Promise<void>((resolve) => setTimeout(resolve, GNANI_MIN_INTERVAL_MS))
+  );
+  gnaniGate = wait;
+  return wait;
+}
+
 async function transcribeWithGnaniOnce(
   filePath: string
 ): Promise<{ transcript: string; raw: unknown; status?: number }> {
@@ -217,6 +233,7 @@ export async function transcribeWithGnani(
   let lastErr: unknown;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
+      await throttleGnaniCall();
       return await transcribeWithGnaniOnce(filePath);
     } catch (err) {
       lastErr = err;
