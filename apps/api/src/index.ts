@@ -10,14 +10,19 @@ import { notesRouter } from "./routes/notes.js";
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
 
-// Reflect any request origin so credentials (session cookies) still work.
-// Browsers reject Access-Control-Allow-Origin: * with credentials: true.
+// No CORS restrictions: any origin, any method, any header is allowed.
+// origin: true reflects whatever Origin the request sent (required for
+// credentials: true to work at all — browsers reject "*" with credentials).
 app.use(
   cors({
     origin: true,
     credentials: true,
+    methods: "*",
+    allowedHeaders: "*",
+    exposedHeaders: "*",
   })
 );
+app.options("*", cors());
 app.use(express.json());
 app.use(cookieParser(process.env.SESSION_COOKIE_SECRET));
 app.use(sessionMiddleware);
