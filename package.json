@@ -1,0 +1,20 @@
+{
+  "name": "gnani-audio-notes",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev:api": "npm run dev -w @gnani/api",
+    "dev:worker": "npm run dev -w @gnani/worker",
+    "dev:web": "npm run dev -w @gnani/web",
+    "db:generate": "npm run generate -w @gnani/db",
+    "db:migrate": "npm run migrate -w @gnani/db",
+    "db:push": "npm run push -w @gnani/db"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
