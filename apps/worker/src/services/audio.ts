@@ -185,6 +185,11 @@ async function transcribeWithGnaniOnce(
       const msg =
         body.error?.message ??
         `Gnani ASR returned status ${response.status}`;
+      // Log the full response, not just the message we surface to the note:
+      // "duration exceeds maximum" from Gnani has, at least once, disagreed
+      // with our own ffprobe measurement of the exact same file — the raw
+      // body is what lets that get root-caused instead of re-guessed.
+      console.error(`Gnani ASR error (status ${response.status}) for ${basename(filePath)}:`, JSON.stringify(body));
       const err = new Error(msg) as Error & { status?: number };
       err.status = response.status;
       throw err;

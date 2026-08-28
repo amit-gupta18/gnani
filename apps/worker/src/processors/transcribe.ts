@@ -24,10 +24,13 @@ import {
 } from "../services/audio.js";
 
 const GNANI_MAX_SECONDS = Number(process.env.GNANI_MAX_SEGMENT_SECONDS ?? 30);
-// Kept a few seconds under Gnani's real 30s cap: input-seek (-ss before -i)
-// isn't frame-exact, so a segment planned right at the ceiling can land
-// over it and get rejected by the vendor with "duration exceeds maximum".
-const targetSec = Number(process.env.CHUNK_TARGET_SECONDS ?? 24);
+// Well under Gnani's stated 30s cap. Measured empirically that our planned
+// segment length and the actual extracted file's duration match exactly
+// (ffprobe confirms it) — so this margin isn't about our own math being
+// imprecise, it's a hedge against Gnani's duration check on the received
+// file disagreeing with ours (e.g. a sample-rate assumption mismatch,
+// which would show up as their measured duration being ~2x ours).
+const targetSec = Number(process.env.CHUNK_TARGET_SECONDS ?? 15);
 const overlapSec = Number(process.env.CHUNK_OVERLAP_SECONDS ?? 2);
 // Lower default concurrency: Gnani rate-limits (429) on request bursts,
 // and fewer parallel chunks means fewer bursts hitting that ceiling.
