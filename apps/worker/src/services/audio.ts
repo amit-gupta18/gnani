@@ -146,10 +146,9 @@ export function stitchTranscripts(chunks: string[], overlapSec: number): string 
   return result.trim();
 }
 
-export async function transcribeWithGnani(filePath: string): Promise<{
-  transcript: string;
-  raw: unknown;
-}> {
+async function transcribeWithGnaniOnce(
+  filePath: string
+): Promise<{ transcript: string; raw: unknown; status?: number }> {
   const apiKey = process.env.GNANI_API_KEY;
   if (!apiKey) throw new Error("GNANI_API_KEY is not set");
 
@@ -186,7 +185,9 @@ export async function transcribeWithGnani(filePath: string): Promise<{
       const msg =
         body.error?.message ??
         `Gnani ASR returned status ${response.status}`;
-      throw new Error(msg);
+      const err = new Error(msg) as Error & { status?: number };
+      err.status = response.status;
+      throw err;
     }
 
     return { transcript: body.transcript ?? "", raw: body };
@@ -198,4 +199,27 @@ export async function transcribeWithGnani(filePath: string): Promise<{
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Gnani rate-limits per-key request bursts (429). A note with several
+// chunks in flight at once is exactly the shape that triggers it, so a
+// short backoff-and-retry here absorbs a transient 429 instead of failing
+// the whole note over what is really just "try again in a second."
+export async function transcribeWithGnani(
+  filePath: string,
+  maxRetries = 3
+): Promise<{ transcript: string; raw: unknown }> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await transcribeWithGnaniOnce(filePath);
+    } catch (err) {
+      lastErr = err;
+      const status = (err as { status?: number }).status;
+      if (status !== 429 || attempt === maxRetries) throw err;
+      const delayMs = 1000 * 2 ** attempt + Math.random() * 250;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw lastErr;
 }

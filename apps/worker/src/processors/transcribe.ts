@@ -24,9 +24,14 @@ import {
 } from "../services/audio.js";
 
 const GNANI_MAX_SECONDS = Number(process.env.GNANI_MAX_SEGMENT_SECONDS ?? 30);
-const targetSec = Number(process.env.CHUNK_TARGET_SECONDS ?? 28);
+// Kept a few seconds under Gnani's real 30s cap: input-seek (-ss before -i)
+// isn't frame-exact, so a segment planned right at the ceiling can land
+// over it and get rejected by the vendor with "duration exceeds maximum".
+const targetSec = Number(process.env.CHUNK_TARGET_SECONDS ?? 24);
 const overlapSec = Number(process.env.CHUNK_OVERLAP_SECONDS ?? 2);
-const concurrency = Number(process.env.TRANSCRIBE_CONCURRENCY ?? 3);
+// Lower default concurrency: Gnani rate-limits (429) on request bursts,
+// and fewer parallel chunks means fewer bursts hitting that ceiling.
+const concurrency = Number(process.env.TRANSCRIBE_CONCURRENCY ?? 2);
 
 export async function processTranscribe(noteId: string): Promise<void> {
   const note = await getNoteById(noteId);
@@ -83,7 +88,14 @@ export async function processTranscribe(noteId: string): Promise<void> {
     const limit = pLimit(concurrency);
     const transcripts: string[] = new Array(segments.length).fill("");
 
-    await Promise.all(
+    // Promise.allSettled, not Promise.all: with concurrent chunks, Promise.all
+    // rejects on the *first* failure while sibling chunk promises are still
+    // in flight. When those siblings reject later, nothing is awaiting them
+    // anymore — an unhandled promise rejection, which crashes the whole
+    // worker process mid-job (Node's default behavior). allSettled always
+    // observes every promise, so a batch of failures degrades to a normal
+    // per-chunk error instead of taking the process down with it.
+    const results = await Promise.allSettled(
       existingChunks.map((chunk) =>
         limit(async () => {
           if (chunk.status === "done" && chunk.transcript) {
@@ -113,6 +125,13 @@ export async function processTranscribe(noteId: string): Promise<void> {
         })
       )
     );
+
+    const firstFailure = results.find(
+      (r): r is PromiseRejectedResult => r.status === "rejected"
+    );
+    if (firstFailure) {
+      throw firstFailure.reason;
+    }
 
     const fullTranscript = stitchTranscripts(
       transcripts.filter(Boolean),
