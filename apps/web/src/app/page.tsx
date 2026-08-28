@@ -74,6 +74,19 @@ export default function HomePage() {
     [router]
   );
 
+  const handleTestSample = useCallback(async () => {
+    setError(null);
+    try {
+      const res = await fetch("/sample-audio.mp3");
+      const blob = await res.blob();
+      const file = new File([blob], "sample-audio.mp3", { type: "audio/mpeg" });
+      await handleFile(file);
+    } catch {
+      setError("Couldn't load the sample audio file.");
+      setState("error");
+    }
+  }, [handleFile]);
+
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -125,6 +138,18 @@ export default function HomePage() {
         <p className="mt-4 text-xs text-[var(--muted)]">
           MP3, WAV, OGG, FLAC, AAC, M4A — up to 50MB
         </p>
+      </div>
+
+      <div className="mt-4 flex items-center justify-center gap-3 text-sm">
+        <span className="text-[var(--muted)]">No file handy?</span>
+        <button
+          type="button"
+          onClick={handleTestSample}
+          disabled={state !== "idle" && state !== "error"}
+          className="font-medium text-[var(--primary)] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Test with a 20s sample clip
+        </button>
       </div>
 
       {state === "uploading" && (
