@@ -148,7 +148,7 @@ export default function HomePage() {
           disabled={state !== "idle" && state !== "error"}
           className="font-medium text-[var(--primary)] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Test with a 20s sample clip
+          Test with a 25s sample clip
         </button>
       </div>
 
